@@ -1,0 +1,64 @@
+name: Build and Deploy to VPS
+
+on:
+  push:
+    branches: [ main ]   # Runs when you push to main branch
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest   # GitHub’s cloud Ubuntu server
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        # Pulls your source code into the workflow machine
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+        # Installs Node.js so we can build your Next.js app
+
+      - name: Install and build
+        run: |
+          npm ci
+          npm run build
+        # npm ci = clean install from package-lock.json
+        # npm run build = build your Next.js app
+
+      - name: Prepare SSH key
+        env:
+          SSH_KEY: ${{ secrets.VPS_DEPLOY_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+        # Sets up SSH key to connect to VPS securely
+
+      - name: Rsync build & app files to VPS
+        run: |
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "mkdir -p ${{ secrets.VPS_TARGET_DIR }}"
+          rsync -avz --delete \
+            --exclude='.git' \
+            --exclude='node_modules' \
+            --exclude='*.log' \
+            ./ ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ secrets.VPS_TARGET_DIR }}
+        # Copies your project from GitHub to VPS via rsync
+        # -a = archive mode (preserve permissions)
+        # -v = verbose (show details)
+        # -z = compress for faster transfer
+        # --delete = remove old files not in new version
+
+      - name: Install production deps & restart service
+        run: |
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
+            set -e
+            cd ${{ secrets.VPS_TARGET_DIR }}
+            npm ci --production
+            sudo systemctl restart my-next-app.service
+            sudo systemctl status my-next-app.service --no-pager
+          EOF
+        # Logs into VPS
+        # Installs only production dependencies
+        # Restarts your app
