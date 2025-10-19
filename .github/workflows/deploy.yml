@@ -53,9 +53,9 @@ jobs:
             set -e
             cd ${{ secrets.VPS_TARGET_DIR }}
             npm ci --production
-            pm2 restart my-next-app || pm2 start npm --name "my-next-app" -- run start
+            pm2 restart next-admin-dashboard || pm2 start npm --name "next-admin-dashboard" -- run start
             pm2 save
-            pm2 status my-next-app
+            pm2 status next-admin-dashboard
           EOF
 
 
