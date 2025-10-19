@@ -46,16 +46,15 @@ jobs:
             --exclude='*.log' \
             -e "ssh $SSH_OPTS" ./ ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ secrets.VPS_TARGET_DIR }}
 
-      - name: Restart app on VPS using PM2
+      - name: Restart app on VPS using PM2 (port 4000)
         run: |
           SSH_OPTS="-i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no"
           ssh $SSH_OPTS ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
             set -e
             cd ${{ secrets.VPS_TARGET_DIR }}
             npm ci --production
-            pm2 restart next-admin-dashboard || pm2 start npm --name "next-admin-dashboard" -- run start
+            PORT=4000 pm2 restart next-admin-dashboard || PORT=4000 pm2 start npm --name "next-admin-dashboard" -- run start
             pm2 save
             pm2 status next-admin-dashboard
           EOF
-
 
