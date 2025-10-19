@@ -53,6 +53,7 @@ jobs:
             set -e
             cd ${{ secrets.VPS_TARGET_DIR }}
             npm ci --production
-            sudo systemctl restart my-next-app.service
+            echo "${{ secrets.VPS_PASSWORD }}" | sudo -S systemctl restart my-next-app.service
             sudo systemctl status my-next-app.service --no-pager
           EOF
+
