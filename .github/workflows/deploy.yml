@@ -27,25 +27,29 @@ jobs:
           SSH_KEY: ${{ secrets.VPS_DEPLOY_KEY }}
         run: |
           mkdir -p ~/.ssh
-          echo "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 700 ~/.ssh
+          printf "%s\n" "$SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
 
       - name: Test SSH connection 🔑
         run: |
-          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "echo '✅ Connected to VPS successfully!'"
+          SSH_OPTS="-i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no"
+          ssh $SSH_OPTS ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "echo '✅ Connected to VPS successfully!'"
 
       - name: Rsync build files to VPS
         run: |
+          SSH_OPTS="-i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no"
           rsync -avz --delete \
             --exclude='.git' \
             --exclude='node_modules' \
             --exclude='*.log' \
-            ./ ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ secrets.VPS_TARGET_DIR }}
+            -e "ssh $SSH_OPTS" ./ ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ secrets.VPS_TARGET_DIR }}
 
       - name: Restart app on VPS
         run: |
-          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
+          SSH_OPTS="-i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no"
+          ssh $SSH_OPTS ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
             set -e
             cd ${{ secrets.VPS_TARGET_DIR }}
             npm ci --production
