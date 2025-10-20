@@ -45,7 +45,7 @@ jobs:
             cd ${{ secrets.VPS_TARGET_DIR }}
 
             echo "🚀 Building Docker image..."
-            docker build -t next-admin-dashboard .
+            docker build -t next-admin-dashboard ./app
 
             echo "🛑 Stopping old container if exists..."
             docker stop next-admin-dashboard || true
